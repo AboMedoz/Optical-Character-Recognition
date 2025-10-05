@@ -10,6 +10,7 @@ import tensorflow_datasets as tfds
 MAX_LABEL_LENGTH = 10   # max word length
 BATCH_SIZE = 32
 IMG_HEIGHT = 28
+MAX_WIDTH = 128
 
 
 def normalize(image, label):
@@ -78,18 +79,23 @@ def decode_batch_predictions(pred):
     return results
 
 
-def preprocess_img(img):
-    h, w = img.shape
-    scale_factor = 28 / h
-    new_w = int(w * scale_factor)
+def preprocess_img(img, dim_axis, img_size=(64, 28)):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    img = cv2.resize(img, (new_w, 28))
-    img = 255 - img
-    _, img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)
-    img = img.astype('float32')
-    img = img / 255.0
-    img = np.expand_dims(img, -1)
-    img = np.expand_dims(img, 0)
-    return img
+    h, w = img.shape
+
+    target_h, target_w = img_size
+
+    scale = target_h / h
+    new_w = int(w * scale)
+
+    resized = cv2.resize(img, (new_w, target_h))
+
+    padded = np.zeros((target_h, target_w), dtype=np.uint8)
+    padded[:, :min(new_w, target_w)] = resized[:, :min(new_w, target_w)]
+
+    padded = padded.astype('float32') / 255.0
+    padded = np.expand_dims(padded, axis=dim_axis)
+    return padded
 
 
